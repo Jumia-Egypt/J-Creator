@@ -225,17 +225,24 @@ const slugify = (s: string): string =>
 // Variant type still has a colorCode field a few other places read.
 const colorNameToSwatch = (_name: string): string => '#9CA3AF';
 
-// Some rows only have a raw hotlinked `image1` (e.g. i.ibb.co) with no
-// pre-optimized `image1_hosted` copy. Hotlinked images are served full-size
+// Raw hotlinked images (e.g. i.ibb.co, i.postimg.cc) are served full-size
 // and uncached, which is slow in the UI's variant grid (multiple images
 // load at once). Route those through wsrv.nl — a free public image proxy —
 // to resize to the actual thumbnail size and re-encode as WebP, cached at
-// its edge. Rows that already have an `image1_hosted` optimized copy are
-// left untouched and used as-is.
+// its edge.
 const toFastThumbnail = (rawUrl: string): string => {
   if (!rawUrl) return rawUrl;
   return `https://wsrv.nl/?url=${encodeURIComponent(rawUrl)}&w=400&output=webp&q=80`;
 };
+
+// `image1_hosted` is only a genuine pre-optimized copy when it differs from
+// the raw `image1` URL (e.g. a real Supabase Storage asset). Some rows have
+// `image1_hosted` populated with a plain copy of `image1` (same slow,
+// un-proxied ibb.co/postimg.cc link) — in that case it must still be routed
+// through the fast-thumbnail proxy, or the whole point of `toFastThumbnail`
+// is silently bypassed.
+const isGenuinelyOptimized = (hosted: string | null, raw: string | null): hosted is string =>
+  !!hosted && hosted !== raw;
 
 interface MasterDataRow {
   barcode: string | null;
@@ -304,7 +311,9 @@ export async function loadLiveCatalog(): Promise<boolean> {
         modelFamilyId: famId,
         color: colorName,
         colorCode: colorNameToSwatch(colorName),
-        thumbnailUrl: row.image1_hosted || toFastThumbnail(row.image1 || ''),
+        thumbnailUrl: isGenuinelyOptimized(row.image1_hosted, row.image1)
+          ? row.image1_hosted
+          : toFastThumbnail(row.image1 || ''),
         storageOptions: [],
         storageSet: new Set<string>(),
         storageBarcodes: {}
