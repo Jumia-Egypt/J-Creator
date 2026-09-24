@@ -184,8 +184,16 @@ export const AdminScreen = () => {
         rowArr[58] = m?.highlights_en || '';
         rowArr[59] = m?.highlights_ar || '';
 
+        // Bulk-sheet exports must always carry the vendor's real, original
+        // image links -- never `image1_hosted` (our internal, resized
+        // Supabase Storage copy used only for the on-site thumbnail picker).
+        // A prior version of this line preferred `image1_hosted` when set,
+        // which was harmless while that column was mostly empty/duplicate,
+        // but started substituting our internal storage URLs for the real
+        // vendor images the moment the on-site self-hosting migration
+        // actually populated it for the whole catalog.
         const imgs = m
-          ? [m.image1_hosted || m.image1, m.image2, m.image3, m.image4, m.image5, m.image6, m.image7]
+          ? [m.image1, m.image2, m.image3, m.image4, m.image5, m.image6, m.image7]
           : [];
         for (let k = 0; k < 7; k++) {
           rowArr[67 + k] = (imgs[k] || '').trim();
