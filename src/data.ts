@@ -329,6 +329,53 @@ export async function loadLiveCatalog(): Promise<boolean> {
   });
 
   const liveModelFamilies = Array.from(famMap.values());
+
+  // Manual display-order overrides, requested directly by George: within
+  // these brands, the named families should appear in this exact sequence,
+  // ahead of everything else. Any family not listed here keeps its normal
+  // position (by insertion order) and simply sorts after the named block.
+  // Family names must match `model_family` in `master_data` exactly.
+  const FAMILY_ORDER_OVERRIDES: Record<string, string[]> = {
+    samsung: ['Galaxy A07 4G', 'Galaxy A07s 4G', 'Galaxy A08 4G'],
+    xiaomi: ['Redmi A5 4G', 'Redmi A7 4G', 'Redmi A7 Pro 4G', 'Redmi 17 4G', 'Redmi 17 5G'],
+    honor: ['X5c 4G', 'X5c Plus 4G', 'X6c 4G', 'Play 20A', 'X7e 4G', 'X7e Plus 5G'],
+    // Everything through 'Note 70 4G' is listed here just to hold its
+    // existing natural position -- only 'C100i 4G' actually needed to move,
+    // slotted in directly after 'Note 70 4G' per George's request. Every
+    // other Realme family (C71 4G onward) is left out of this list on
+    // purpose, so it keeps sorting after this named block in its normal order.
+    realme: ['Note 60x 4G', 'Note 70 4G', 'C100i 4G'],
+  };
+  const originalIndexById = new Map<string, number>();
+  liveModelFamilies.forEach((f, i) => originalIndexById.set(f.id, i));
+  const rankOf = (f: ModelFamily): number => {
+    const overrideNames = FAMILY_ORDER_OVERRIDES[f.brandId];
+    const overrideIdx = overrideNames ? overrideNames.indexOf(f.name) : -1;
+    // Unranked families sort after every named one, keeping their own
+    // original relative order among themselves.
+    return overrideIdx !== -1 ? overrideIdx : 1000 + (originalIndexById.get(f.id) ?? 0);
+  };
+  // A comparator that returns 0 for every cross-brand pair (instead of a
+  // real, consistent difference) breaks Array.prototype.sort on a mixed
+  // multi-brand array: sort algorithms assume comparator results are
+  // transitive (if a~b and b~c then a~c), and "different brand -> 0" is
+  // NOT actually transitive once a same-brand pair (a~c, real difference)
+  // is involved. In practice this silently failed to reorder anything for
+  // brands whose families were interleaved with many other brands' families
+  // in the fetch order -- confirmed against real production data, not just
+  // a small isolated test. Fixed by giving every pair a single consistent
+  // sort key instead: each brand keeps its original first-appearance
+  // position (so brand-to-brand ordering elsewhere is untouched), and only
+  // families within the same brand are compared by rank.
+  const brandFirstIndex = new Map<string, number>();
+  liveModelFamilies.forEach((f, i) => {
+    if (!brandFirstIndex.has(f.brandId)) brandFirstIndex.set(f.brandId, i);
+  });
+  liveModelFamilies.sort((a, b) => {
+    if (a.brandId === b.brandId) return rankOf(a) - rankOf(b);
+    return (brandFirstIndex.get(a.brandId) ?? 0) - (brandFirstIndex.get(b.brandId) ?? 0);
+  });
+
   const liveVariants = Array.from(varMap.values()).map(v => ({
     id: v.id,
     modelFamilyId: v.modelFamilyId,
