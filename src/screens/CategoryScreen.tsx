@@ -13,7 +13,7 @@ export const CategoryScreen = () => {
 
   const handleSelect = (id: string) => {
     setSelectedCategory(id);
-    setCurrentView('device-type');
+    setCurrentView('condition');
   };
 
   const container = {

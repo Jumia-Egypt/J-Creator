@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { Submission, SubmissionItem } from '../types';
 import { PhoneTagsManager } from '../components/PhoneTagsManager';
-import { modelFamilies, BULK_HEADERS } from '../data';
+import { modelFamilies, BULK_HEADERS, refurbByBarcode, REFURB_IOS_CATEGORY } from '../data';
 import { sb } from '../supabase';
 
 // Real admin account, same email production uses — must be created once in
@@ -158,11 +158,14 @@ export const AdminScreen = () => {
       csvRows.push(BULK_HEADERS.map(csvEsc).join(','));
 
       sub.items.forEach((item: SubmissionItem) => {
-        const m = item.barcode ? byBarcode[item.barcode] : undefined;
+        const isRefurb = !!(item.barcode && refurbByBarcode[item.barcode]);
+        const m = item.barcode ? (byBarcode[item.barcode] || refurbByBarcode[item.barcode]) : undefined;
         const bc = m?.barcode || item.barcode || '';
         const sku = item.supplierSku && item.supplierSku.trim() ? item.supplierSku.trim() : bc;
         const nameAR = m?.name_ar || '';
-        const colorAR = nameAR.indexOf(' - ') > -1 ? nameAR.split(' - ').pop()?.trim() || '' : '';
+        // Refurbished AR names end with the grade (e.g. Midnight "فئة A"), not a
+        // clean Arabic color, so color_AR is left blank for them.
+        const colorAR = !isRefurb && nameAR.indexOf(' - ') > -1 ? nameAR.split(' - ').pop()?.trim() || '' : '';
 
         const rowArr = new Array(75).fill('');
         rowArr[0] = m?.name_en || item.modelName || '';
@@ -172,7 +175,7 @@ export const AdminScreen = () => {
         rowArr[6] = sku;
         rowArr[7] = sku;
         rowArr[8] = m?.brand || item.brandName || '';
-        rowArr[9] = '1002300 - Phones & Tablets / Mobile Phones / Smartphones / Android Phones';
+        rowArr[9] = isRefurb ? REFURB_IOS_CATEGORY : '1002300 - Phones & Tablets / Mobile Phones / Smartphones / Android Phones';
         rowArr[10] = bc;
         rowArr[15] = 0;
         rowArr[16] = '...';

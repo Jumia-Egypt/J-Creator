@@ -5,8 +5,8 @@ import { motion } from 'motion/react';
 import { ArrowLeft, ChevronRight, Sparkles, Flame, Tag } from 'lucide-react';
 
 export const ModelScreen = () => {
-  const { selectedBrandId, setSelectedModelId, setCurrentView, getModelTags } = useStore();
-  const models = selectedBrandId ? getModelFamiliesByBrand(selectedBrandId) : [];
+  const { selectedBrandId, selectedCondition, setSelectedModelId, setCurrentView, getModelTags } = useStore();
+  const models = selectedBrandId ? getModelFamiliesByBrand(selectedBrandId, selectedCondition || 'new') : [];
   const brand = selectedBrandId ? getBrandById(selectedBrandId) : null;
 
   const handleSelect = (id: string) => {

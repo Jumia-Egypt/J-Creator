@@ -5,8 +5,8 @@ import { motion } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
 
 export const BrandScreen = () => {
-  const { selectedDeviceType, setSelectedBrandId, setCurrentView } = useStore();
-  const activeBrands = selectedDeviceType ? getBrandsByDeviceType(selectedDeviceType) : [];
+  const { selectedDeviceType, selectedCondition, setSelectedBrandId, setCurrentView } = useStore();
+  const activeBrands = selectedDeviceType ? getBrandsByDeviceType(selectedDeviceType, selectedCondition || 'new') : [];
 
   const handleSelect = (id: string) => {
     setSelectedBrandId(id);

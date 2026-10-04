@@ -13,6 +13,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const steps = [
     { id: 'category', label: 'Category' },
+    { id: 'condition', label: 'Condition' },
     { id: 'device-type', label: 'Device Type' },
     { id: 'brand', label: 'Brand' },
     { id: 'model', label: 'Model' },
