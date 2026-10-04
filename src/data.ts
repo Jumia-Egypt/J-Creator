@@ -1,4 +1,5 @@
-import { Brand, Category, DeviceType, ModelFamily, Variant } from './types';
+import { Brand, Category, Condition, DeviceType, ModelFamily, Variant } from './types';
+import { REFURB_ROWS } from './refurbData';
 import { sb } from './supabase';
 
 // The exact 75-column Jumia Vendor Center bulk-upload template header row —
@@ -32,6 +33,14 @@ export const deviceTypes: DeviceType[] = [
   { id: 'ios', name: 'iOS', available: false },
   { id: 'feature', name: 'Feature Phones', available: false },
 ];
+
+// Refurbished flow: Android is not available yet, iOS is live.
+export const refurbDeviceTypes: DeviceType[] = [
+  { id: 'android', name: 'Android', available: false },
+  { id: 'ios', name: 'iOS', available: true },
+];
+
+export const REFURB_IOS_CATEGORY = '1002314 - Phones & Tablets / Mobile Phones / Smartphones / iOS Phones';
 
 export const brands: Brand[] = [
   { id: 'samsung', name: 'Samsung', deviceTypeIds: ['android'] },
@@ -199,10 +208,19 @@ export const variants: Variant[] = [
 ];
 
 export const getBrandById = (id: string) => brands.find(b => b.id === id);
-export const getBrandsByDeviceType = (deviceTypeId: string) => brands.filter(b => b.deviceTypeIds.includes(deviceTypeId));
-export const getModelFamilyById = (id: string) => modelFamilies.find(m => m.id === id);
-export const getModelFamiliesByBrand = (brandId: string) => modelFamilies.filter(m => m.brandId === brandId);
-export const getVariantsByModelId = (modelId: string) => variants.filter(v => v.modelFamilyId === modelId);
+export const refurbModelFamilies: ModelFamily[] = [];
+export const refurbVariants: Variant[] = [];
+
+export const getBrandsByDeviceType = (deviceTypeId: string, condition: Condition = 'new') =>
+  condition === 'refurbished'
+    ? brands.filter(b => deviceTypeId === 'ios' && refurbModelFamilies.some(f => f.brandId === b.id))
+    : brands.filter(b => b.deviceTypeIds.includes(deviceTypeId));
+export const getModelFamilyById = (id: string) =>
+  modelFamilies.find(m => m.id === id) || refurbModelFamilies.find(m => m.id === id);
+export const getModelFamiliesByBrand = (brandId: string, condition: Condition = 'new') =>
+  (condition === 'refurbished' ? refurbModelFamilies : modelFamilies).filter(m => m.brandId === brandId);
+export const getVariantsByModelId = (modelId: string) =>
+  variants.filter(v => v.modelFamilyId === modelId).concat(refurbVariants.filter(v => v.modelFamilyId === modelId));
 
 // ---------------------------------------------------------------------------
 // SANDBOX DATABASE WIRING
@@ -399,3 +417,50 @@ export async function loadLiveCatalog(): Promise<boolean> {
 
   return true;
 }
+
+// ---------------------------------------------------------------------------
+// REFURBISHED CATALOG (TEST BUILD) -- built from the hardcoded sheet rows.
+// Each color card lists "RAM/ROM · Grade" rows; every row maps to its own
+// barcode, exactly like the New flow's storageBarcodes.
+// ---------------------------------------------------------------------------
+const GRADE_ORDER: Record<string, number> = { Renewed: 0, A: 1, B: 2 };
+const gradeLabel = (g: string) => (g === 'Renewed' ? 'Renewed' : `Grade ${g}`);
+
+// Lookup the CSV export uses to enrich a refurbished barcode (these rows
+// have no master_data entry). Shaped like a master_data row on purpose.
+export const refurbByBarcode: Record<string, any> = {};
+
+(() => {
+  const famMap = new Map<string, ModelFamily>();
+  const varMap = new Map<string, Variant & { opts: { label: string; rom: number; ram: number; g: number }[] }>();
+  REFURB_ROWS.forEach(r => {
+    const brandId = BRAND_NAME_TO_ID[r.brand.toLowerCase()];
+    if (!brandId) return;
+    const famId = slugify(`refurb-${brandId}-${r.family}`);
+    if (!famMap.has(famId)) famMap.set(famId, { id: famId, brandId, name: r.family, isNew: false, tags: [] });
+    const varId = slugify(`${famId}-${r.color}`);
+    let v = varMap.get(varId);
+    if (!v) {
+      v = { id: varId, modelFamilyId: famId, color: r.color, colorCode: colorNameToSwatch(r.color),
+            thumbnailUrl: toFastThumbnail(r.imgs[0] || ''), storageOptions: [], storageBarcodes: {}, opts: [] };
+      varMap.set(varId, v);
+    }
+    const label = `${r.ram}/${r.rom} · ${gradeLabel(r.grade)}`;
+    const [rom, ram] = parseStorage(`${r.ram}/${r.rom}`);
+    v.opts.push({ label, rom, ram, g: GRADE_ORDER[r.grade] ?? 9 });
+    v.storageBarcodes![label] = r.barcode;
+    refurbByBarcode[r.barcode] = {
+      barcode: r.barcode, brand: r.brand, model_family: r.family, color: r.color,
+      name_en: r.name_en, name_ar: r.name_ar, long_desc_en: r.desc_en, long_desc_ar: r.desc_ar,
+      highlights_en: r.hl_en, highlights_ar: r.hl_ar,
+      image1: r.imgs[0], image2: r.imgs[1], image3: r.imgs[2], image4: r.imgs[3],
+      image5: r.imgs[4], image6: r.imgs[5], image7: r.imgs[6],
+    };
+  });
+  refurbModelFamilies.push(...famMap.values());
+  varMap.forEach(v => {
+    v.opts.sort((a, b) => a.rom - b.rom || a.ram - b.ram || a.g - b.g);
+    const { opts, ...rest } = v;
+    refurbVariants.push({ ...rest, storageOptions: opts.map(o => o.label) });
+  });
+})();

@@ -1,6 +1,7 @@
 export type ViewState = 
   | 'landing'
   | 'category'
+  | 'condition'
   | 'device-type'
   | 'brand'
   | 'model'
@@ -90,3 +91,5 @@ export interface Submission {
   batchId?: string; // sandbox-database batch id (submissions.batch_id)
 }
 
+
+export type Condition = 'new' | 'refurbished';

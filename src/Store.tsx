@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { QueueItem, ViewState, Submission, SubmissionItem } from './types';
+import { QueueItem, ViewState, Submission, SubmissionItem, Condition } from './types';
+import { TEST_MODE } from './testMode';
 import { modelFamilies } from './data';
 import { sb } from './supabase';
 
@@ -69,6 +70,7 @@ interface StoreState {
   currentView: ViewState;
   shopName: string;
   selectedCategory: string | null;
+  selectedCondition: Condition | null;
   selectedDeviceType: string | null;
   selectedBrandId: string | null;
   selectedModelId: string | null;
@@ -81,6 +83,7 @@ interface StoreState {
   setCurrentView: (view: ViewState) => void;
   setShopName: (name: string) => void;
   setSelectedCategory: (id: string | null) => void;
+  setSelectedCondition: (c: Condition | null) => void;
   setSelectedDeviceType: (id: string | null) => void;
   setSelectedBrandId: (id: string | null) => void;
   setSelectedModelId: (id: string | null) => void;
@@ -107,6 +110,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const [currentView, setCurrentView] = useState<ViewState>('landing');
   const [shopName, setShopName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCondition, setSelectedCondition] = useState<Condition | null>(null);
   const [selectedDeviceType, setSelectedDeviceType] = useState<string | null>(null);
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
@@ -214,6 +218,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     setSubmissions((prev) => [sub, ...prev]);
 
     // Persist the flattened line items to the sandbox database.
+    if (TEST_MODE) return; // test build: keep the submission in memory only
     (async () => {
       try {
         const rows = sub.items.map((it) => ({
@@ -241,6 +246,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const deleteSubmission = (id: string) => {
     setSubmissions((prev) => prev.filter((s) => s.id !== id));
 
+    if (TEST_MODE) return;
     (async () => {
       try {
         const { error } = await sb.from('submissions').delete().eq('batch_id', id);
@@ -253,6 +259,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   
   const resetWizard = () => {
     setSelectedCategory(null);
+    setSelectedCondition(null);
     setSelectedDeviceType(null);
     setSelectedBrandId(null);
     setSelectedModelId(null);
@@ -265,6 +272,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         currentView, setCurrentView,
         shopName, setShopName,
         selectedCategory, setSelectedCategory,
+        selectedCondition, setSelectedCondition,
         selectedDeviceType, setSelectedDeviceType,
         selectedBrandId, setSelectedBrandId,
         selectedModelId, setSelectedModelId,

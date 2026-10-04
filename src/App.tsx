@@ -8,6 +8,7 @@ import { StoreProvider, useStore } from './Store';
 import { Layout } from './components/Layout';
 import { LandingScreen } from './screens/LandingScreen';
 import { CategoryScreen } from './screens/CategoryScreen';
+import { ConditionScreen } from './screens/ConditionScreen';
 import { DeviceTypeScreen } from './screens/DeviceTypeScreen';
 import { BrandScreen } from './screens/BrandScreen';
 import { ModelScreen } from './screens/ModelScreen';
@@ -24,6 +25,7 @@ const Router = () => {
     switch (currentView) {
       case 'landing': return <LandingScreen />;
       case 'category': return <CategoryScreen />;
+      case 'condition': return <ConditionScreen />;
       case 'device-type': return <DeviceTypeScreen />;
       case 'brand': return <BrandScreen />;
       case 'model': return <ModelScreen />;
