@@ -9,7 +9,7 @@ import { sb } from './supabase';
 // has no ram/rom/storage column of its own (same as production) — barcode
 // is the stable join key, so re-enrich each row's storage string from
 // master_data by barcode, matching production's CSV-enrichment pattern.
-const fetchSandboxSubmissions = async (): Promise<Submission[]> => {
+const fetchSandboxSubmissions = async (): Promise<Submission[] | null> => {
   const [{ data, error }, catalogRes] = await Promise.all([
     sb.from('submissions').select('*').order('created_at', { ascending: false }),
     sb.from('master_data').select('barcode, ram, rom')
@@ -17,7 +17,7 @@ const fetchSandboxSubmissions = async (): Promise<Submission[]> => {
 
   if (error || !data) {
     console.error('Failed to load sandbox submissions', error);
-    return [];
+    return null;
   }
 
   const storageByBarcode = new Map<string, string>();
@@ -91,6 +91,7 @@ interface StoreState {
   addSubmission: (submission: Submission) => void;
   deleteSubmission: (id: string) => void;
   setIsAdmin: (val: boolean) => void;
+  refreshSubmissions: () => Promise<void>;
   resetWizard: () => void;
   getModelTags: (modelId: string) => string[];
   toggleModelTag: (modelId: string, tag: string) => void;
@@ -118,8 +119,16 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   // Source of truth for submissions is now the sandbox database, not
   // localStorage — load it once when the app mounts.
   useEffect(() => {
-    fetchSandboxSubmissions().then(setSubmissions);
+    fetchSandboxSubmissions().then((rows) => { if (rows) setSubmissions(rows); });
   }, []);
+
+  // Re-pull submissions on demand (admin "Refresh" button) so new vendor
+  // requests show up without a page reload / re-login. On a failed fetch
+  // the current list is kept rather than blanked.
+  const refreshSubmissions = async () => {
+    const rows = await fetchSandboxSubmissions();
+    if (rows) setSubmissions(rows);
+  };
 
   // Helper to construct baseline model tags from modelFamilies definition
   const getDefaultModelTags = (): Record<string, string[]> => {
@@ -272,6 +281,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         submissions, addSubmission, deleteSubmission,
         lastSubmission,
         isAdmin, setIsAdmin,
+        refreshSubmissions,
         resetWizard,
         modelTags,
         getModelTags,

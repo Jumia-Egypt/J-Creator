@@ -5,7 +5,7 @@ import {
   Shield, Lock, Download, Trash2, 
   Search, Store, Layers, X, Eye, 
   Building2, ShoppingBag, ArrowUpRight,
-  Tag, Sparkles, Flame, ArrowLeft, LayoutDashboard, ChevronRight
+  Tag, Sparkles, Flame, ArrowLeft, LayoutDashboard, ChevronRight, RefreshCw
 } from 'lucide-react';
 import { Submission, SubmissionItem } from '../types';
 import { PhoneTagsManager } from '../components/PhoneTagsManager';
@@ -39,7 +39,8 @@ export const AdminScreen = () => {
     addSubmission, 
     deleteSubmission, 
     shopName,
-    modelTags
+    modelTags,
+    refreshSubmissions
   } = useStore();
 
   const [adminSection, setAdminSection] = useState<'hub' | 'dashboard' | 'tags'>('hub');
@@ -49,6 +50,16 @@ export const AdminScreen = () => {
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [activeTab, setActiveTab] = useState<'submissions' | 'shops'>('submissions');
   const [signingIn, setSigningIn] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshSubmissions();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -534,6 +545,14 @@ export const AdminScreen = () => {
                   </button>
                 )}
               </div>
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#F68B1E] hover:bg-[#E07A10] text-white text-xs font-bold shadow-md shadow-orange-500/20 transition-all disabled:opacity-70"
+              >
+                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
             </div>
           </div>
 
