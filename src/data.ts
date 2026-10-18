@@ -337,14 +337,14 @@ export async function loadLiveCatalog(): Promise<boolean> {
   // Family names must match `model_family` in `master_data` exactly.
   const FAMILY_ORDER_OVERRIDES: Record<string, string[]> = {
     samsung: ['Galaxy A07 4G', 'Galaxy A07s 4G', 'Galaxy A08 4G'],
-    xiaomi: ['Redmi A5 4G', 'Redmi A7 4G', 'Redmi A7 Pro 4G', 'Redmi 17 4G', 'Redmi 17 5G'],
-    honor: ['X5c 4G', 'X5c Plus 4G', 'X6c 4G', 'Play 20A', 'X7e 4G', 'X7e Plus 5G'],
+    xiaomi: ['Poco C85 4G', 'Redmi A5 4G', 'Redmi A7 4G', 'Redmi A7 Pro 4G', 'Redmi 17 4G', 'Redmi 17 5G'],
+    honor: ['X5c 4G', 'X5c Plus 4G', 'X6c 4G', 'X6e 4G', 'Play 20A', 'X7e 4G', 'X7e Plus 5G'],
     // Everything through 'Note 70 4G' is listed here just to hold its
     // existing natural position -- only 'C100i 4G' actually needed to move,
     // slotted in directly after 'Note 70 4G' per George's request. Every
     // other Realme family (C71 4G onward) is left out of this list on
     // purpose, so it keeps sorting after this named block in its normal order.
-    realme: ['Note 60x 4G', 'Note 70 4G', 'C100i 4G'],
+    realme: ['Note 60x 4G', 'Note 70 4G', 'C100i 4G', 'C100 4G', 'C100x 4G'],
     // Through 'A6 4G' just holds the existing natural position; only
     // 'A6 5G' needed to move, slotted directly after 'A6 4G' per George.
     // The remaining Oppo families (A6t 5G onward) are left unlisted so they
