@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { QueueItem, ViewState, Submission, SubmissionItem } from './types';
-import { modelFamilies } from './data';
+import { modelFamilies, brands, fetchFlaggedFamilyIds } from './data';
 import { sb } from './supabase';
 
 // Reads every submission row out of the sandbox `submissions` table and
@@ -145,58 +145,99 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     return defaults;
   };
 
+  // New Launch flags: the database (master_data.is_new_launch) is the single
+  // source of truth, so every device -- the admin's and every vendor's -- shows
+  // the same thing. Nothing is kept in localStorage any more (the old per-browser
+  // copy is what made flags differ between devices and never update).
   const [modelTags, setModelTags] = useState<Record<string, string[]>>(() => {
-    const saved = localStorage.getItem('phone_model_tags');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (typeof parsed === 'object' && parsed !== null) {
-          return { ...getDefaultModelTags(), ...parsed };
-        }
-      } catch (e) {
-        console.error('Failed to parse phone model tags', e);
-      }
-    }
+    try { localStorage.removeItem('phone_model_tags'); } catch { /* ignore */ }
     return getDefaultModelTags();
   });
 
+  const tagsFromFlagged = (flagged: Set<string>): Record<string, string[]> => {
+    const map: Record<string, string[]> = {};
+    modelFamilies.forEach((m) => { map[m.id] = flagged.has(m.id) ? ['New Launch'] : []; });
+    return map;
+  };
+
+  // Re-read the flags from the database; keep the current ones if it fails.
+  const refreshModelTags = async () => {
+    const flagged = await fetchFlaggedFamilyIds();
+    if (!flagged) return;
+    const next = tagsFromFlagged(flagged);
+    setModelTags((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+  };
+
+  // Pages that are already open pick up flag changes by themselves: re-check
+  // every 30s while the tab is visible, and immediately when the tab/phone
+  // comes back to the foreground.
   useEffect(() => {
-    localStorage.setItem('phone_model_tags', JSON.stringify(modelTags));
-  }, [modelTags]);
+    const onVisible = () => { if (document.visibilityState === 'visible') refreshModelTags(); };
+    const timer = window.setInterval(onVisible, 30000);
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    refreshModelTags();
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, []);
 
   const getModelTags = (modelId: string): string[] => {
     return modelTags[modelId] || [];
   };
 
+  // Writes the flag for a whole model family (every row of brand + family).
+  // Only the admin account is allowed to (database policy); if the save is
+  // refused or fails we put the old value back and tell the admin.
+  const saveNewLaunch = async (modelId: string, on: boolean): Promise<boolean> => {
+    const fam = modelFamilies.find((m) => m.id === modelId);
+    const brandName = fam ? brands.find((b) => b.id === fam.brandId)?.name : undefined;
+    if (!fam || !brandName) return false;
+    const { data, error } = await sb
+      .from('master_data')
+      .update({ is_new_launch: on })
+      .eq('model_family', fam.name)
+      .ilike('brand', brandName)
+      .select('barcode');
+    return !error && !!data && data.length > 0;
+  };
+
   const toggleModelTag = (modelId: string, tag: string) => {
-    setModelTags((prev) => {
-      const current = prev[modelId] || [];
-      const exists = current.includes(tag);
-      const updated = exists ? current.filter((t) => t !== tag) : [...current, tag];
-      return { ...prev, [modelId]: updated };
+    if (tag !== 'New Launch') return;
+    const had = (modelTags[modelId] || []).includes(tag);
+    setModelTags((prev) => ({ ...prev, [modelId]: had ? [] : [tag] }));
+    saveNewLaunch(modelId, !had).then((ok) => {
+      if (!ok) {
+        setModelTags((prev) => ({ ...prev, [modelId]: had ? [tag] : [] }));
+        window.alert('Could not save the New Launch flag. Please make sure you are logged in as admin and try again.');
+      }
     });
   };
 
-  const resetModelTags = () => {
-    const def = getDefaultModelTags();
-    setModelTags(def);
-    localStorage.setItem('phone_model_tags', JSON.stringify(def));
-  };
+  const resetModelTags = () => { refreshModelTags(); };
 
   const clearAllModelTags = () => {
+    const before = modelTags;
     const emptyMap: Record<string, string[]> = {};
-    modelFamilies.forEach((m) => {
-      emptyMap[m.id] = [];
-    });
+    modelFamilies.forEach((m) => { emptyMap[m.id] = []; });
     setModelTags(emptyMap);
-    localStorage.setItem('phone_model_tags', JSON.stringify(emptyMap));
+    sb.from('master_data')
+      .update({ is_new_launch: false })
+      .eq('is_new_launch', true)
+      .select('barcode')
+      .then(({ error }) => {
+        if (error) {
+          setModelTags(before);
+          window.alert('Could not clear the New Launch flags. Please make sure you are logged in as admin and try again.');
+        }
+      });
   };
 
   const clearModelTags = (modelId: string) => {
-    setModelTags((prev) => {
-      const next = { ...prev, [modelId]: [] };
-      return next;
-    });
+    if ((modelTags[modelId] || []).length === 0) return;
+    toggleModelTag(modelId, 'New Launch');
   };
 
   const addToQueue = (item: QueueItem) => setQueue((prev) => [...prev, item]);

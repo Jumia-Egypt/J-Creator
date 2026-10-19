@@ -267,6 +267,24 @@ const parseStorage = (s: string): [number, number] => {
   return [rom, ram];
 };
 
+// Lightweight "which families are flagged New Launch right now" lookup.
+// The flag lives in master_data.is_new_launch (one source of truth for every
+// device), so pages that are already open can re-check it without reloading
+// the whole catalog. Returns null on any failure so callers keep what they have.
+export async function fetchFlaggedFamilyIds(): Promise<Set<string> | null> {
+  const { data, error } = await sb
+    .from('master_data')
+    .select('brand, model_family')
+    .eq('is_new_launch', true);
+  if (error || !data) return null;
+  const ids = new Set<string>();
+  (data as { brand: string | null; model_family: string | null }[]).forEach(row => {
+    const brandId = row.brand ? BRAND_NAME_TO_ID[row.brand.toLowerCase()] : undefined;
+    if (brandId && row.model_family) ids.add(slugify(`${brandId}-${row.model_family}`));
+  });
+  return ids;
+}
+
 export async function loadLiveCatalog(): Promise<boolean> {
   const { data, error } = await sb
     .from('master_data')

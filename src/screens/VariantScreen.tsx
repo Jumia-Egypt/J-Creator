@@ -11,7 +11,8 @@ export const VariantScreen = () => {
     selectedBrandId, 
     setCurrentView, 
     addToQueue,
-    queue
+    queue,
+    getModelTags
   } = useStore();
   
   const model = selectedModelId ? getModelFamilyById(selectedModelId) : null;
@@ -136,7 +137,7 @@ export const VariantScreen = () => {
           <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
             {model.name}
           </h2>
-          {model.isNew && (
+          {getModelTags(model.id).includes('New Launch') && (
             <span className="bg-gradient-to-r from-orange-50 to-orange-100 text-[#F68B1E] text-[10px] font-extrabold px-2.5 py-1 rounded-md uppercase tracking-widest border border-orange-200/50">
               New Launch
             </span>
