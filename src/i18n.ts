@@ -108,7 +108,7 @@ const ar: Record<string, string> = {
   'export.items': 'عنصر',
   'export.submittedItems': 'العناصر المرسلة',
   'export.startNew': 'ابدأ دفعة جديدة',
-  'export.selfTitle': 'ملفك جاهز للرفع',
+  'export.selfTitle': 'كيفية رفع الملف',
   'export.stepPress': 'اضغط على',
   'export.stepType': 'اضغط على Type Box ثم اختر',
   'export.stepAction': 'اضغط على Action Box ثم اختر',
