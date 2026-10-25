@@ -4,8 +4,10 @@ import { getModelFamilyById, getVariantsByModelId, getBrandById } from '../data'
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, Info, ArrowLeft, Plus, CheckCircle2, ChevronDown, AlertCircle } from 'lucide-react';
 import { SelectedVariant } from '../types';
+import { useT } from '../i18n';
 
 export const VariantScreen = () => {
+  const { t } = useT();
   const { 
     selectedModelId, 
     selectedBrandId, 
@@ -74,7 +76,7 @@ export const VariantScreen = () => {
     const allSelected = availableOptions.every(s => isSelected(variantId, s));
     
     setSelectedVariants(prev => {
-      const filtered = prev.filter(v => v.variantId !== variantId);
+      const filtered = prev.filter(v => !(v.variantId === variantId && storageOptions.includes(v.storage)));
       if (allSelected) {
         return filtered;
       } else {
@@ -87,7 +89,7 @@ export const VariantScreen = () => {
   const handleAddToQueue = () => {
     if (selectedVariants.length === 0 || !model || !brand) return;
     if (!productionCountry || !warrantyPeriod) {
-      setFormError('Please select a production country and warranty period to proceed.');
+      setFormError(t('variant.formError', 'Please select a production country and warranty period to proceed.'));
       return;
     }
     setFormError('');
@@ -131,7 +133,7 @@ export const VariantScreen = () => {
           onClick={() => setCurrentView('model')}
           className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-900 text-sm font-bold mb-6 transition-colors bg-white px-4 py-2 rounded-xl border border-gray-200/60 shadow-sm hover:shadow-md"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Models
+          <ArrowLeft className="w-4 h-4 rtl:rotate-180" /> {t('variant.back', 'Back to Models')}
         </button>
         <div className="flex items-center gap-4 mb-2">
           <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
@@ -139,11 +141,11 @@ export const VariantScreen = () => {
           </h2>
           {getModelTags(model.id).includes('New Launch') && (
             <span className="bg-gradient-to-r from-orange-50 to-orange-100 text-[#F68B1E] text-[10px] font-extrabold px-2.5 py-1 rounded-md uppercase tracking-widest border border-orange-200/50">
-              New Launch
+              {t('model.newLaunch', 'New Launch')}
             </span>
           )}
         </div>
-        <p className="text-gray-500 font-medium">Select colors and storage configurations.</p>
+        <p className="text-gray-500 font-medium">{t('variant.desc', 'Select colors and storage configurations.')}</p>
       </motion.div>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -176,12 +178,12 @@ export const VariantScreen = () => {
                   
                   <div className="p-6 flex-1 flex flex-col bg-white">
                     <div className="flex justify-between items-center mb-5">
-                      <span className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest shrink-0">Variants (RAM/ROM)</span>
+                      <span className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest shrink-0">{t('variant.header', 'Variants (RAM/ROM)')}</span>
                       <button 
                         onClick={() => selectAllForVariant(variant.id, variant.storageOptions)}
                         className="text-[11px] font-extrabold uppercase tracking-widest text-[#F68B1E] hover:text-orange-700 transition-colors"
                       >
-                        {allSelected ? 'Deselect All' : 'Select All'}
+                        {allSelected ? t('variant.deselectAll', 'Deselect All') : t('variant.selectAll', 'Select All')}
                       </button>
                     </div>
                     
@@ -206,7 +208,7 @@ export const VariantScreen = () => {
                             <div className="flex items-center justify-between w-full pointer-events-none">
                               <div className="flex flex-col gap-0.5">
                                 <span className={`font-bold text-sm ${checked ? 'text-[#F68B1E]' : 'text-gray-700'}`}>{storage}</span>
-                                {inQueue && <span className="text-[10px] font-extrabold text-[#F68B1E] uppercase tracking-wider">In Queue</span>}
+                                {inQueue && <span className="text-[10px] font-extrabold text-[#F68B1E] uppercase tracking-wider">{t('variant.inQueue', 'In Queue')}</span>}
                               </div>
                               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${
                                 checked ? 'bg-[#F68B1E] border-[#F68B1E] text-white' : 'border-gray-200 bg-gray-50'
@@ -235,7 +237,7 @@ export const VariantScreen = () => {
                                   <input 
                                     type="text"
                                     disabled={inQueue}
-                                    placeholder="Supplier SKU (Optional)"
+                                    placeholder={t('variant.sku', 'Supplier SKU (Optional)')}
                                     value={inQueue ? (queuedVar?.supplierSku || '') : (selectedVar?.supplierSku || '')}
                                     onClick={(e) => e.stopPropagation()}
                                     onChange={(e) => updateSupplierSku(variant.id, storage, e.target.value)}
@@ -255,7 +257,7 @@ export const VariantScreen = () => {
           </motion.div>
         ) : (
            <motion.div variants={itemAnim} className="bg-white/80 backdrop-blur-lg border border-gray-200/60 rounded-3xl p-16 text-center shadow-lg shadow-gray-200/20">
-            <p className="text-gray-500 font-medium text-base">No variants available for this model.</p>
+            <p className="text-gray-500 font-medium text-base">{t('variant.none', 'No variants available for this model.')}</p>
           </motion.div>
         )}
       </div>
@@ -263,14 +265,14 @@ export const VariantScreen = () => {
       <motion.div variants={itemAnim} className="w-full lg:w-80 shrink-0">
         <div className="bg-white/80 backdrop-blur-xl border border-gray-200/60 rounded-3xl shadow-xl shadow-gray-200/40 sticky top-28 overflow-hidden">
           <div className="p-6 border-b border-gray-200/60 bg-gradient-to-b from-gray-50/50 to-transparent">
-            <h3 className="font-extrabold text-lg text-gray-900">Batch Settings</h3>
-            <p className="text-gray-500 font-medium text-xs mt-1">Applies to all selected items</p>
+            <h3 className="font-extrabold text-lg text-gray-900">{t('variant.batchSettings', 'Batch Settings')}</h3>
+            <p className="text-gray-500 font-medium text-xs mt-1">{t('variant.applies', 'Applies to all selected items')}</p>
           </div>
           
           <div className="p-6 space-y-5">
             <div>
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                Production Origin
+                {t('variant.origin', 'Production Origin')}
               </label>
               <div className="relative">
                 <CustomSelect 
@@ -280,12 +282,12 @@ export const VariantScreen = () => {
                     if (val && warrantyPeriod) setFormError('');
                   }}
                   options={[
-                    { value: 'Egypt', label: 'Egypt' },
-                    { value: 'China', label: 'China' },
-                    { value: 'Vietnam', label: 'Vietnam' },
-                    { value: 'China, Egypt', label: 'China, Egypt' }
+                    { value: 'Egypt', label: t('Egypt', 'Egypt') },
+                    { value: 'China', label: t('China', 'China') },
+                    { value: 'Vietnam', label: t('Vietnam', 'Vietnam') },
+                    { value: 'China, Egypt', label: t('China, Egypt', 'China, Egypt') }
                   ]}
-                  placeholder="Select Country"
+                  placeholder={t('variant.selectCountry', 'Select Country')}
                   error={!productionCountry && !!formError}
                 />
               </div>
@@ -293,7 +295,7 @@ export const VariantScreen = () => {
 
             <div>
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-                Warranty Period
+                {t('variant.warranty', 'Warranty Period')}
               </label>
               <div className="relative">
                 <CustomSelect 
@@ -303,13 +305,13 @@ export const VariantScreen = () => {
                     if (val && productionCountry) setFormError('');
                   }}
                   options={[
-                    { value: 'No Warranty', label: 'No Warranty' },
-                    { value: '6 Months', label: '6 Months' },
-                    { value: '1 Year', label: '1 Year' },
-                    { value: '18 Months', label: '18 Months' },
-                    { value: '2 Years', label: '2 Years' }
+                    { value: 'No Warranty', label: t('No Warranty', 'No Warranty') },
+                    { value: '6 Months', label: t('6 Months', '6 Months') },
+                    { value: '1 Year', label: t('1 Year', '1 Year') },
+                    { value: '18 Months', label: t('18 Months', '18 Months') },
+                    { value: '2 Years', label: t('2 Years', '2 Years') }
                   ]}
-                  placeholder="Select Warranty"
+                  placeholder={t('variant.selectWarranty', 'Select Warranty')}
                   error={!warrantyPeriod && !!formError}
                 />
               </div>
@@ -332,7 +334,7 @@ export const VariantScreen = () => {
 
           <div className="p-6 bg-gradient-to-b from-gray-50/50 to-gray-50 border-t border-gray-200/60">
             <div className="flex items-center justify-between mb-5">
-              <span className="text-gray-500 font-bold text-sm">Selected Items</span>
+              <span className="text-gray-500 font-bold text-sm">{t('variant.selectedItems', 'Selected Items')}</span>
               <motion.span 
                 key={selectedVariants.length}
                 initial={{ scale: 1.5, color: '#F68B1E' }}
@@ -352,7 +354,7 @@ export const VariantScreen = () => {
                 className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-black text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-gray-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none text-sm cursor-pointer"
               >
                 <Plus className="w-5 h-5" />
-                Add to Queue
+                {t('variant.addToQueue', 'Add to Queue')}
               </motion.button>
             </div>
             
@@ -365,7 +367,7 @@ export const VariantScreen = () => {
                   className="mt-4 flex items-start gap-2.5 text-gray-400 text-xs font-medium"
                 >
                   <Info className="w-4 h-4 shrink-0 mt-0.5" />
-                  <p>Select at least one variant configuration to add to your export queue.</p>
+                  <p>{t('variant.hint', 'Select at least one variant configuration to add to your export queue.')}</p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -406,7 +408,7 @@ const CustomSelect = ({
         } rounded-xl px-4 py-3.5 text-sm font-bold text-gray-900 focus:outline-none transition-all cursor-pointer shadow-sm`}
       >
         <span className={value ? 'text-gray-900' : 'text-gray-400'}>
-          {value ? options.find(o => o.value === value)?.label : placeholder}
+          {value ? <bdi>{options.find(o => o.value === value)?.label}</bdi> : placeholder}
         </span>
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
@@ -439,7 +441,7 @@ const CustomSelect = ({
                       : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
-                  {option.label}
+                  <bdi>{option.label}</bdi>
                 </button>
               ))}
             </motion.div>

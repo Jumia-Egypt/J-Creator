@@ -1,15 +1,25 @@
 import React from 'react';
 import { useStore } from '../Store';
-import { deviceTypes } from '../data';
+import { deviceTypes, getBrandsByDeviceType } from '../data';
 import { motion } from 'motion/react';
 import { Smartphone, MonitorPlay, ChevronRight, ArrowLeft } from 'lucide-react';
+import { useT } from '../i18n';
 
 export const DeviceTypeScreen = () => {
-  const { setSelectedDeviceType, setCurrentView } = useStore();
+  const { t } = useT();
+  const { setSelectedDeviceType, setSelectedBrandId, setCurrentView } = useStore();
   const types = deviceTypes;
 
   const handleSelect = (id: string) => {
     setSelectedDeviceType(id);
+    // Only one brand under this ecosystem (e.g. Apple on iOS): skip the
+    // Brand screen and go straight to its model families.
+    const brands = getBrandsByDeviceType(id);
+    if (brands.length === 1) {
+      setSelectedBrandId(brands[0].id);
+      setCurrentView('model');
+      return;
+    }
     setCurrentView('brand');
   };
 
@@ -46,12 +56,12 @@ export const DeviceTypeScreen = () => {
           onClick={() => setCurrentView('category')}
           className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-900 text-sm font-bold mb-6 transition-colors bg-white px-4 py-2 rounded-xl border border-gray-200/60 shadow-sm hover:shadow-md"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Categories
+          <ArrowLeft className="w-4 h-4 rtl:rotate-180" /> {t('device.backCategories', 'Back to Categories')}
         </button>
         <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">
-          Select Ecosystem
+          {t('device.title', 'Select Ecosystem')}
         </h2>
-        <p className="text-gray-500 font-medium">Narrow down the operating system or device type.</p>
+        <p className="text-gray-500 font-medium">{t('device.desc', 'Narrow down the operating system or device type.')}</p>
       </motion.div>
 
       <motion.div variants={container} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -63,13 +73,13 @@ export const DeviceTypeScreen = () => {
               key={type.id}
               disabled={!type.available}
               onClick={() => handleSelect(type.id)}
-              className={`relative flex items-center p-6 rounded-3xl border text-left transition-colors group ${
+              className={`relative flex items-center p-6 rounded-3xl border text-start transition-colors group ${
                 type.available 
                   ? 'bg-white border-gray-200/60 hover:border-[#F68B1E]/40 hover:shadow-xl hover:shadow-orange-500/5 cursor-pointer' 
                   : 'bg-gray-50 border-gray-100 opacity-60 cursor-not-allowed'
               }`}
             >
-              <div className={`mr-5 w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+              <div className={`me-5 w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
                 type.available 
                   ? 'bg-gradient-to-br from-orange-50 to-orange-100/50 text-[#F68B1E] group-hover:from-[#E87B10] group-hover:to-[#F9A246] group-hover:text-white group-hover:shadow-md' 
                   : 'bg-gray-200/50 text-gray-400'
@@ -82,11 +92,11 @@ export const DeviceTypeScreen = () => {
                   {type.name}
                 </span>
                 {!type.available && (
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Coming Soon</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{t('device.soon', 'Coming Soon')}</span>
                 )}
               </div>
 
-              {type.available && <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#F68B1E] transition-colors" />}
+              {type.available && <ChevronRight className="w-5 h-5 rtl:rotate-180 text-gray-300 group-hover:text-[#F68B1E] transition-colors" />}
             </motion.button>
         ))}
       </motion.div>

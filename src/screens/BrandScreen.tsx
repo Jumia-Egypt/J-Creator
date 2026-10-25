@@ -3,8 +3,10 @@ import { useStore } from '../Store';
 import { getBrandsByDeviceType } from '../data';
 import { motion } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
+import { useT } from '../i18n';
 
 export const BrandScreen = () => {
+  const { t } = useT();
   const { selectedDeviceType, setSelectedBrandId, setCurrentView } = useStore();
   const activeBrands = selectedDeviceType ? getBrandsByDeviceType(selectedDeviceType) : [];
 
@@ -39,12 +41,12 @@ export const BrandScreen = () => {
           onClick={() => setCurrentView('device-type')}
           className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-900 text-sm font-bold mb-6 transition-colors bg-white px-4 py-2 rounded-xl border border-gray-200/60 shadow-sm hover:shadow-md"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Ecosystem
+          <ArrowLeft className="w-4 h-4 rtl:rotate-180" /> {t('brand.back', 'Back to Ecosystem')}
         </button>
         <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">
-          Select Brand
+          {t('brand.title', 'Select Brand')}
         </h2>
-        <p className="text-gray-500 font-medium">Choose the original manufacturer.</p>
+        <p className="text-gray-500 font-medium">{t('brand.desc', 'Choose the original manufacturer.')}</p>
       </motion.div>
 
       <motion.div variants={container} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">

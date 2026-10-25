@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { Submission, SubmissionItem } from '../types';
 import { PhoneTagsManager } from '../components/PhoneTagsManager';
-import { modelFamilies, BULK_HEADERS } from '../data';
+import { modelFamilies } from '../data';
+import { downloadBatchSheet } from '../downloadSheet';
 import { sb } from '../supabase';
 
 // Real admin account, same email production uses — must be created once in
@@ -99,7 +100,8 @@ export const AdminScreen = () => {
         brands: safeBrands(s.brands),
         status: s.status || 'Processed',
         items: Array.isArray(s.items) ? s.items : [],
-        timestamp: s.timestamp || Date.now()
+        timestamp: s.timestamp || Date.now(),
+        handledBy: s.handledBy
       }))
     : [];
 
@@ -119,116 +121,18 @@ export const AdminScreen = () => {
     return matchesId || matchesShop || matchesBrand;
   });
 
-  // This is the same real 75-column Jumia Vendor Center bulk-upload
-  // template production exports (BULK_HEADERS, copied verbatim), built the
-  // same way: fetch the live catalog fresh, match each submitted item back
-  // to its real master_data row by barcode (falling back to whatever was
-  // saved on the item itself if no match is found), and lay each field out
-  // at the exact same column index production uses — so a CSV downloaded
-  // here opens as the identical template vendors already know, not a
-  // simplified custom sheet.
-  const csvEsc = (v: any): string => {
-    if (v === null || v === undefined || v === '') return '';
-    const s = String(v);
-    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  };
-  // Long all-digit values (barcodes, SKUs) get silently mangled by Excel —
-  // opened normally, a 13-digit barcode gets auto-detected as a number and
-  // shown in scientific notation. Wrapping as ="123..." forces Excel to
-  // display it as exact text instead (production's Round 24 fix, same here).
-  const csvForceText = (v: any): string => {
-    if (v === null || v === undefined || v === '') return '';
-    const s = String(v);
-    if (/^\d{6,}$/.test(s)) return '="' + s.replace(/"/g, '""') + '"';
-    return csvEsc(v);
-  };
-  // Column indices holding barcode/SKU-style long digit strings:
-  // SellerSKU (6), ParentSKU (7), GTIN_Barcode (10) — same as production.
-  const FORCE_TEXT_COLS = new Set([6, 7, 10]);
-  const csvEscRow = (v: any, i: number) => (FORCE_TEXT_COLS.has(i) ? csvForceText(v) : csvEsc(v));
-
-  const downloadSubmissionCSV = async (sub: Submission) => {
+  // Downloads the Jumia Vendor Center product-creation template with this
+  // request's products filled in (see src/downloadSheet.ts).
+  const downloadSubmissionSheet = async (sub: Submission) => {
     if (!sub || !sub.items || sub.items.length === 0) {
       alert('No items to export for this submission.');
       return;
     }
 
     try {
-      const { data: masterData, error: masterError } = await sb.from('master_data').select('*');
-      if (masterError) {
-        alert('Catalog loading failed: ' + masterError.message);
-        return;
-      }
-
-      const byBarcode: Record<string, any> = {};
-      (masterData || []).forEach((m: any) => {
-        if (m.barcode) byBarcode[m.barcode] = m;
-      });
-
-      const csvRows: string[] = [];
-      csvRows.push(BULK_HEADERS.map(csvEsc).join(','));
-
-      sub.items.forEach((item: SubmissionItem) => {
-        const m = item.barcode ? byBarcode[item.barcode] : undefined;
-        const bc = m?.barcode || item.barcode || '';
-        const sku = item.supplierSku && item.supplierSku.trim() ? item.supplierSku.trim() : bc;
-        const nameAR = m?.name_ar || '';
-        const colorAR = nameAR.indexOf(' - ') > -1 ? nameAR.split(' - ').pop()?.trim() || '' : '';
-
-        const rowArr = new Array(75).fill('');
-        rowArr[0] = m?.name_en || item.modelName || '';
-        rowArr[1] = nameAR;
-        rowArr[3] = m?.long_desc_en || '';
-        rowArr[4] = m?.long_desc_ar || '';
-        rowArr[6] = sku;
-        rowArr[7] = sku;
-        rowArr[8] = m?.brand || item.brandName || '';
-        rowArr[9] = '1002300 - Phones & Tablets / Mobile Phones / Smartphones / Android Phones';
-        rowArr[10] = bc;
-        rowArr[15] = 0;
-        rowArr[16] = '...';
-        rowArr[21] = m?.color || item.colorName || '';
-        rowArr[22] = colorAR;
-        rowArr[42] = m?.model_family || item.modelName || '';
-        rowArr[52] = item.warrantyPeriod || '';
-        rowArr[54] = item.productionCountry || '';
-        rowArr[58] = m?.highlights_en || '';
-        rowArr[59] = m?.highlights_ar || '';
-
-        // Bulk-sheet exports must always carry the vendor's real, original
-        // image links -- never `image1_hosted` (our internal, resized
-        // Supabase Storage copy used only for the on-site thumbnail picker).
-        // A prior version of this line preferred `image1_hosted` when set,
-        // which was harmless while that column was mostly empty/duplicate,
-        // but started substituting our internal storage URLs for the real
-        // vendor images the moment the on-site self-hosting migration
-        // actually populated it for the whole catalog.
-        const imgs = m
-          ? [m.image1, m.image2, m.image3, m.image4, m.image5, m.image6, m.image7]
-          : [];
-        for (let k = 0; k < 7; k++) {
-          rowArr[67 + k] = (imgs[k] || '').trim();
-        }
-
-        csvRows.push(rowArr.map(csvEscRow).join(','));
-      });
-
-      // UTF-8 BOM so Excel renders the Arabic (Name_AR, color_AR, etc.)
-      // columns correctly instead of mojibake — production includes this.
-      const blob = new Blob(['﻿' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      const safeShop = (sub.shopName || 'store').replace(/[^a-zA-Z0-9]/g, '_');
-      const dateStamp = sub.date ? sub.date.slice(0, 10) : new Date().toISOString().slice(0, 10);
-      link.download = `Jumia_BulkSheet_${safeShop}_${dateStamp}.csv`;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      await downloadBatchSheet(sub.items, sub.shopName, sub.date);
     } catch (err: any) {
-      alert('Failed to build CSV: ' + err.message);
+      alert('Failed to build sheet: ' + err.message);
     }
   };
 
@@ -656,6 +560,15 @@ export const AdminScreen = () => {
                         <Store className="w-4 h-4 text-gray-400 group-hover:text-[#F68B1E] transition-colors" />
                         <span>{sub.shopName}</span>
                       </div>
+                      {sub.handledBy && (
+                        <span className={`mt-1.5 inline-block px-2 py-0.5 rounded-md border font-bold text-[10px] ${
+                          sub.handledBy === 'content-team'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200/60'
+                            : 'bg-gray-50 text-gray-600 border-gray-200/80'
+                        }`}>
+                          {sub.handledBy === 'content-team' ? 'Content team uploads' : 'Vendor uploads'}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1.5">
@@ -694,7 +607,7 @@ export const AdminScreen = () => {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => downloadSubmissionCSV(sub)}
+                          onClick={() => downloadSubmissionSheet(sub)}
                           className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all border border-gray-200/80 bg-white shadow-2xs" 
                           title="Download CSV"
                         >
@@ -853,7 +766,7 @@ export const AdminScreen = () => {
                   Close
                 </button>
                 <button
-                  onClick={() => downloadSubmissionCSV(selectedSubmission)}
+                  onClick={() => downloadSubmissionSheet(selectedSubmission)}
                   className="px-5 py-2.5 text-sm font-bold bg-[#F68B1E] hover:bg-[#E87B10] text-white rounded-xl shadow-lg shadow-orange-500/20 transition-all flex items-center gap-2"
                 >
                   <Download className="w-4 h-4" /> Download CSV

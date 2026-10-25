@@ -78,6 +78,10 @@ export interface SubmissionItem {
   barcode?: string;
 }
 
+// Who creates the products from the submitted batch: the vendor downloads the
+// sheet and uploads it to Vendor Center, or the Jumia content team does it.
+export type HandledBy = 'vendor' | 'content-team';
+
 export interface Submission {
   id: string;
   shopName: string;
@@ -88,5 +92,6 @@ export interface Submission {
   items: SubmissionItem[];
   timestamp: number;
   batchId?: string; // sandbox-database batch id (submissions.batch_id)
+  handledBy?: HandledBy; // submissions.handled_by; absent on older batches
 }
 

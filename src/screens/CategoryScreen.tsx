@@ -3,12 +3,14 @@ import { useStore } from '../Store';
 import { categories } from '../data';
 import { motion } from 'motion/react';
 import { Smartphone, Laptop, Watch, Headphones, Tablet, Camera, Tv, Speaker, ChevronRight } from 'lucide-react';
+import { useT } from '../i18n';
 
 const icons = {
   Smartphone, Laptop, Watch, Headphones, Tablet, Camera, Tv, Speaker
 };
 
 export const CategoryScreen = () => {
+  const { t } = useT();
   const { setSelectedCategory, setCurrentView } = useStore();
 
   const handleSelect = (id: string) => {
@@ -55,15 +57,15 @@ export const CategoryScreen = () => {
               key={cat.id}
               disabled={!cat.available}
               onClick={() => handleSelect(cat.id)}
-              className={`relative flex flex-col p-6 rounded-3xl border text-left transition-colors ${
+              className={`relative flex flex-col p-6 rounded-3xl border text-start transition-colors ${
                 cat.available 
                   ? 'bg-white border-gray-200/60 hover:border-[#F68B1E]/40 hover:shadow-xl hover:shadow-orange-500/5 cursor-pointer group' 
                   : 'bg-gray-50 border-gray-100 opacity-60 cursor-not-allowed'
               }`}
             >
               {!cat.available && (
-                <div className="absolute top-5 right-5 bg-gray-200/80 text-gray-500 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-widest backdrop-blur-sm">
-                  Soon
+                <div className="absolute top-5 end-5 bg-gray-200/80 text-gray-500 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-widest backdrop-blur-sm">
+                  {t('category.soon', 'Soon')}
                 </div>
               )}
               
@@ -79,7 +81,7 @@ export const CategoryScreen = () => {
                 <span className={`font-bold text-lg ${cat.available ? 'text-gray-900 group-hover:text-[#F68B1E] transition-colors' : 'text-gray-400'}`}>
                   {cat.name}
                 </span>
-                {cat.available && <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#F68B1E] transition-colors" />}
+                {cat.available && <ChevronRight className="w-5 h-5 rtl:rotate-180 text-gray-300 group-hover:text-[#F68B1E] transition-colors" />}
               </div>
             </motion.button>
           );

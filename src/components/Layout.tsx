@@ -3,20 +3,22 @@ import { useStore } from '../Store';
 import { ClipboardList, LogOut, Shield, Package2, Edit2, Store, X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ErrorBoundary } from './ErrorBoundary';
+import { useT } from '../i18n';
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
-  const { currentView, setCurrentView, shopName, setShopName, queue, isAdmin, setIsAdmin } = useStore();
+  const { currentView, setCurrentView, shopName, setShopName, queue, isAdmin, setIsAdmin, setLang } = useStore();
+  const { t, isAr } = useT();
   const [isEditingStoreName, setIsEditingStoreName] = useState(false);
   const [tempShopName, setTempShopName] = useState(shopName);
 
   const isWizard = !['landing', 'admin', 'queue', 'export'].includes(currentView);
 
   const steps = [
-    { id: 'category', label: 'Category' },
-    { id: 'device-type', label: 'Device Type' },
-    { id: 'brand', label: 'Brand' },
-    { id: 'model', label: 'Model' },
-    { id: 'variant', label: 'Variants' }
+    { id: 'category', label: t('step.category', 'Category') },
+    { id: 'device-type', label: t('step.deviceType', 'Device Type') },
+    { id: 'brand', label: t('step.brand', 'Brand') },
+    { id: 'model', label: t('step.model', 'Model') },
+    { id: 'variant', label: t('step.variants', 'Variants') }
   ];
 
   const currentStepIndex = steps.findIndex(s => s.id === currentView);
@@ -42,7 +44,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                 <>
                   <div className="hidden sm:flex items-center gap-2 bg-gray-50 border border-gray-200/80 rounded-xl px-3 py-1.5 hover:border-gray-100 transition-colors">
                     <div className="flex flex-col items-start leading-tight">
-                      <span className="text-[9px] text-gray-500 uppercase tracking-widest font-extrabold">Active Store</span>
+                      <span className="text-[9px] text-gray-500 uppercase tracking-widest font-extrabold">{t('header.activeStore', 'Active Store')}</span>
                       <span className="text-xs font-bold text-gray-900 truncate max-w-[120px]">{shopName || 'Default Store'}</span>
                     </div>
                     <motion.button 
@@ -53,7 +55,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                         setIsEditingStoreName(true);
                       }}
                       className="p-1.5 text-[#F68B1E] hover:bg-orange-100/60 rounded-lg transition-colors ml-1"
-                      title="Change Shop Name"
+                      title={t('header.changeStore', 'Change Shop Name')}
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </motion.button>
@@ -62,6 +64,16 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   <div className="w-px h-6 bg-gray-200 hidden sm:block"></div>
                 </>
               )}
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setLang(isAr ? 'en' : 'ar')}
+                className="px-3 py-2 text-xs font-bold text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors border border-gray-200/50"
+                title={isAr ? 'English' : 'العربية'}
+              >
+                {isAr ? 'English' : 'العربية'}
+              </motion.button>
 
               <motion.button 
                 whileHover={{ scale: 1.05 }}
@@ -76,7 +88,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0, opacity: 0 }}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gradient-to-tr from-[#E87B10] to-[#F9A246] text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm"
+                      className="absolute -top-1.5 -end-1.5 w-5 h-5 bg-gradient-to-tr from-[#E87B10] to-[#F9A246] text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm"
                     >
                       {queue.length}
                     </motion.span>
@@ -180,7 +192,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   <div className="p-2 bg-orange-50 rounded-xl text-[#F68B1E]">
                     <Store className="w-5 h-5" />
                   </div>
-                  <h3 className="font-bold text-lg text-gray-900">Change Store Name</h3>
+                  <h3 className="font-bold text-lg text-gray-900">{t('header.changeStore', 'Change Store Name')}</h3>
                 </div>
                 <button 
                   onClick={() => setIsEditingStoreName(false)}
@@ -192,13 +204,13 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  Store / Vendor Name
+                  {t('header.storeVendorName', 'Store / Vendor Name')}
                 </label>
                 <input 
                   type="text" 
                   value={tempShopName}
                   onChange={(e) => setTempShopName(e.target.value)}
-                  placeholder="Write Your Shop Name"
+                  placeholder={t('landing.placeholder', 'Write Your Shop Name')}
                   autoFocus
                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl font-semibold text-gray-800 placeholder:text-gray-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#F68B1E]/50 focus:border-[#F68B1E] transition-all"
                   onKeyDown={(e) => {
@@ -215,7 +227,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   onClick={() => setIsEditingStoreName(false)}
                   className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-800 rounded-xl transition-colors"
                 >
-                  Cancel
+                  {t('header.cancel', 'Cancel')}
                 </button>
                 <button 
                   onClick={() => {
@@ -224,7 +236,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   }}
                   className="px-5 py-2 text-sm font-bold bg-gradient-to-r from-[#E87B10] to-[#F9A246] text-white rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
                 >
-                  <Check className="w-4 h-4" /> Save Store Name
+                  <Check className="w-4 h-4" /> {t('header.saveStore', 'Save Store Name')}
                 </button>
               </div>
             </motion.div>

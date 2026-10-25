@@ -1,25 +1,6 @@
 import { Brand, Category, DeviceType, ModelFamily, Variant } from './types';
 import { sb } from './supabase';
 
-// The exact 75-column Jumia Vendor Center bulk-upload template header row —
-// copied verbatim from production (jumia-sku-creator-v2's src/data.ts) so a
-// CSV downloaded from this sandbox opens as the identical template vendors
-// already know, not a simplified custom sheet.
-export const BULK_HEADERS = [
-  "Name", "Name_AR", "Name_FR", "Description", "Description_AR", "Description_FR", "SellerSKU", "ParentSKU",
-  "Brand", "PrimaryCategory", "GTIN_Barcode", "Price_EGP", "Sale_Price_EGP", "Sale_Price_Start_At",
-  "Sale_Price_End_At", "Stock", "variation", "battery_feature", "bluetooth", "certifications", "chipset_manufacturer",
-  "color", "color_AR", "color_FR", "color_family", "condition", "cpu_brand", "cpu_cores", "cpu_speed",
-  "display_features", "display_size", "expandable_memory", "external_memory_slot", "extra_features",
-  "graphics_processor", "health_features", "main_material", "manufacturer_txt", "material_family",
-  "megapixels", "memory_capacity", "memory_technology", "model", "network_coverage", "note", "operating_system",
-  "package_content", "package_content_AR", "package_content_FR", "panel_type", "product_line", "product_measures",
-  "product_warranty", "product_weight", "production_country", "rear_camera", "screen_size", "security_features",
-  "short_description", "short_description_AR", "short_description_FR", "sim_size", "storage_capacity",
-  "warranty_address", "warranty_duration", "warranty_type", "youtube_id", "MainImage", "Image2", "Image3",
-  "Image4", "Image5", "Image6", "Image7", "Image8"
-];
-
 export const categories: Category[] = [
   { id: 'phones', name: 'Phones', icon: 'Smartphone', available: true },
   { id: 'tablets', name: 'Tablets', icon: 'Tablet', available: false },

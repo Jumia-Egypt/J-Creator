@@ -58,7 +58,8 @@ const fetchSandboxSubmissions = async (): Promise<Submission[] | null> => {
       brands: Array.from(new Set(rows.map((r) => r.brand).filter(Boolean))) as string[],
       status: 'Processed',
       items,
-      timestamp: ts
+      timestamp: ts,
+      handledBy: first.handled_by === 'vendor' || first.handled_by === 'content-team' ? first.handled_by : undefined
     });
   });
 
@@ -76,6 +77,8 @@ interface StoreState {
   submissions: Submission[];
   lastSubmission: Submission | null;
   isAdmin: boolean;
+  lang: 'en' | 'ar';
+  setLang: (l: 'en' | 'ar') => void;
   modelTags: Record<string, string[]>;
   
   setCurrentView: (view: ViewState) => void;
@@ -115,6 +118,19 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const [lastSubmission, setLastSubmission] = useState<Submission | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [lang, setLangState] = useState<'en' | 'ar'>(() => {
+    try { return localStorage.getItem('jc_lang') === 'ar' ? 'ar' : 'en'; } catch { return 'en'; }
+  });
+  const setLang = (l: 'en' | 'ar') => {
+    setLangState(l);
+    try { localStorage.setItem('jc_lang', l); } catch { /* ignore */ }
+  };
+  // Switching language only changes the words: the layout always stays
+  // left-to-right, so every element keeps the same place and size.
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = 'ltr';
+  }, [lang]);
 
   // Source of truth for submissions is now the sandbox database, not
   // localStorage — load it once when the app mounts.
@@ -276,7 +292,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
           color: it.colorName || null,
           seller_sku: it.supplierSku || null,
           batch_id: sub.batchId || null,
-          barcode: it.barcode || null
+          barcode: it.barcode || null,
+          handled_by: sub.handledBy || null
         }));
         if (rows.length > 0) {
           const { error } = await sb.from('submissions').insert(rows);
@@ -322,6 +339,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         submissions, addSubmission, deleteSubmission,
         lastSubmission,
         isAdmin, setIsAdmin,
+        lang, setLang,
         refreshSubmissions,
         resetWizard,
         modelTags,

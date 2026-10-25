@@ -1,13 +1,17 @@
 import React from 'react';
 import { useStore } from '../Store';
-import { getModelFamiliesByBrand, getBrandById } from '../data';
+import { getModelFamiliesByBrand, getBrandById, getBrandsByDeviceType } from '../data';
 import { motion } from 'motion/react';
 import { ArrowLeft, ChevronRight, Sparkles, Flame, Tag } from 'lucide-react';
+import { useT } from '../i18n';
 
 export const ModelScreen = () => {
-  const { selectedBrandId, setSelectedModelId, setCurrentView, getModelTags } = useStore();
+  const { t } = useT();
+  const { selectedBrandId, selectedDeviceType, setSelectedModelId, setCurrentView, getModelTags } = useStore();
   const models = selectedBrandId ? getModelFamiliesByBrand(selectedBrandId) : [];
   const brand = selectedBrandId ? getBrandById(selectedBrandId) : null;
+  // Brand screen is skipped when an ecosystem has a single brand, so Back goes to Ecosystem.
+  const brandSkipped = !!selectedDeviceType && getBrandsByDeviceType(selectedDeviceType).length === 1;
 
   const handleSelect = (id: string) => {
     setSelectedModelId(id);
@@ -37,15 +41,15 @@ export const ModelScreen = () => {
     >
       <motion.div variants={item} className="mb-12">
         <button 
-          onClick={() => setCurrentView('brand')}
+          onClick={() => setCurrentView(brandSkipped ? 'device-type' : 'brand')}
           className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-900 text-sm font-bold mb-6 transition-colors bg-white px-4 py-2 rounded-xl border border-gray-200/60 shadow-sm hover:shadow-md"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Brands
+          <ArrowLeft className="w-4 h-4 rtl:rotate-180" /> {brandSkipped ? t('model.backEcosystem', 'Back to Ecosystem') : t('model.backBrands', 'Back to Brands')}
         </button>
         <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">
-          Model Family {brand && <span className="text-gray-400 font-medium ml-2">/ {brand.name}</span>}
+          {t('model.title', 'Model Family')} {brand && <span className="text-gray-400 font-medium ml-2">/ {brand.name}</span>}
         </h2>
-        <p className="text-gray-500 font-medium">Choose the specific product line to configure.</p>
+        <p className="text-gray-500 font-medium">{t('model.desc', 'Choose the specific product line to configure.')}</p>
       </motion.div>
 
       {models.length > 0 ? (
@@ -61,7 +65,7 @@ export const ModelScreen = () => {
                 whileTap={{ scale: 0.98 }}
                 key={model.id}
                 onClick={() => handleSelect(model.id)}
-                className="relative flex items-center justify-between p-6 bg-white border border-gray-200/60 rounded-3xl hover:border-[#F68B1E]/40 hover:shadow-xl hover:shadow-orange-500/5 transition-colors text-left group"
+                className="relative flex items-center justify-between p-6 bg-white border border-gray-200/60 rounded-3xl hover:border-[#F68B1E]/40 hover:shadow-xl hover:shadow-orange-500/5 transition-colors text-start group"
               >
                 <div>
                   <span className="block font-bold text-gray-900 text-lg mb-1.5 group-hover:text-[#F68B1E] transition-colors">
@@ -70,19 +74,19 @@ export const ModelScreen = () => {
                   <div className="flex flex-wrap items-center gap-1.5 mt-1">
                     {hasNewLaunch && (
                       <span className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-50 to-orange-100 text-[#F68B1E] text-[10px] font-extrabold px-2.5 py-0.5 rounded-md uppercase tracking-wider border border-orange-200/60 shadow-2xs">
-                        <Sparkles className="w-2.5 h-2.5" /> New Launch
+                        <Sparkles className="w-2.5 h-2.5" /> {t('model.newLaunch', 'New Launch')}
                       </span>
                     )}
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#F68B1E] transition-colors" />
+                <ChevronRight className="w-5 h-5 rtl:rotate-180 text-gray-300 group-hover:text-[#F68B1E] transition-colors" />
               </motion.button>
             );
           })}
         </motion.div>
       ) : (
         <motion.div variants={item} className="bg-white/80 backdrop-blur-lg border border-gray-200/60 rounded-3xl p-16 text-center shadow-lg shadow-gray-200/20">
-          <p className="text-gray-500 font-medium text-base">No models available for this brand.</p>
+          <p className="text-gray-500 font-medium text-base">{t('model.empty', 'No models available for this brand.')}</p>
         </motion.div>
       )}
     </motion.div>
