@@ -15,9 +15,22 @@ import { VariantScreen } from './screens/VariantScreen';
 import { QueueScreen } from './screens/QueueScreen';
 import { ExportScreen } from './screens/ExportScreen';
 import { AdminScreen } from './screens/AdminScreen';
-import { loadLiveCatalog } from './data';
+import { loadLiveCatalog, modelFamilies, variants } from './data';
 
-const Router = () => {
+// How often an open page re-checks the database for newly added products.
+const CATALOG_REFRESH_MS = 30000;
+
+// Cheap fingerprint of what vendors can see, so the page only re-renders
+// when a product, colour, storage option, photo or New Launch flag changed.
+const catalogSignature = (): string =>
+  JSON.stringify([
+    modelFamilies.map(f => [f.id, f.isNew]),
+    variants.map(v => [v.id, v.thumbnailUrl, v.storageOptions]),
+  ]);
+
+// `catalogVersion` is not read here: it only forces this tree to re-render
+// after the catalog arrays are refreshed in place.
+const Router = ({ catalogVersion: _catalogVersion }: { catalogVersion: number }) => {
   const { currentView } = useStore();
 
   const renderView = () => {
@@ -47,9 +60,45 @@ export default function App() {
   // downstream sees real (sandbox) data instead of the static sample set.
   const [catalogReady, setCatalogReady] = useState(false);
 
+  const [catalogVersion, setCatalogVersion] = useState(0);
+
   useEffect(() => {
     loadLiveCatalog().finally(() => setCatalogReady(true));
   }, []);
+
+  // Keep the catalog fresh without vendors having to reload: re-fetch while
+  // the tab is visible, when it regains focus, and on a timer. A failed fetch
+  // leaves the current data untouched.
+  useEffect(() => {
+    if (!catalogReady) return;
+    let busy = false;
+    let lastSignature = catalogSignature();
+
+    const refresh = async () => {
+      if (busy || document.visibilityState !== 'visible') return;
+      busy = true;
+      try {
+        if (await loadLiveCatalog()) {
+          const next = catalogSignature();
+          if (next !== lastSignature) {
+            lastSignature = next;
+            setCatalogVersion(v => v + 1);
+          }
+        }
+      } finally {
+        busy = false;
+      }
+    };
+
+    const timer = window.setInterval(refresh, CATALOG_REFRESH_MS);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [catalogReady]);
 
   if (!catalogReady) {
     return (
@@ -71,7 +120,7 @@ export default function App() {
 
   return (
     <StoreProvider>
-      <Router />
+      <Router catalogVersion={catalogVersion} />
     </StoreProvider>
   );
 }
