@@ -130,9 +130,9 @@ const ar: Record<string, string> = {
   'choice.downloadFailed': 'تم إرسال دفعتك، لكن تعذّر تنزيل الملف. يمكنك تنزيله مرة أخرى في الشاشة التالية.',
 
   // New version notice
-  'update.ready': 'يتوفر إصدار جديد. سيتم التحديث تلقائيًا عند الانتهاء من هذه الدفعة.',
+  'update.ready': 'يتوفر إصدار جديد. سيتم التحديث تلقائيًا فور انتهائك من هذه الخطوة.',
   'update.now': 'حدّث الآن',
-  'update.confirm': 'سيؤدي التحديث الآن إلى مسح دفعتك الحالية. هل تريد المتابعة؟',
+  'update.confirm': 'اختياراتك في هذه الشاشة لم تُضف إلى القائمة بعد وستُفقد. هل تريد التحديث الآن؟',
 };
 
 // Returns a translator: `t('landing.start', 'Start New Batch')`. The English

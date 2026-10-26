@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { QueueItem, ViewState, Submission, SubmissionItem } from './types';
 import { modelFamilies, brands, fetchFlaggedFamilyIds } from './data';
 import { sb } from './supabase';
+import { takeResume, ResumeState } from './resume';
 
 // How often the Admin Portal re-checks for new vendor requests.
 const SUBMISSIONS_REFRESH_MS = 15000;
@@ -98,6 +99,7 @@ interface StoreState {
   deleteSubmission: (id: string) => void;
   setIsAdmin: (val: boolean) => void;
   refreshSubmissions: () => Promise<void>;
+  snapshotForResume: () => ResumeState;
   resetWizard: () => void;
   getModelTags: (modelId: string) => string[];
   toggleModelTag: (modelId: string, tag: string) => void;
@@ -111,14 +113,20 @@ const initialSubmissions: Submission[] = [];
 const StoreContext = createContext<StoreState | undefined>(undefined);
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
-  const [currentView, setCurrentView] = useState<ViewState>('landing');
-  const [shopName, setShopName] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedDeviceType, setSelectedDeviceType] = useState<string | null>(null);
-  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
-  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
-  const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [lastSubmission, setLastSubmission] = useState<Submission | null>(null);
+  // If this page was just reloaded to pick up a new version, start from the
+  // place the vendor was at (read once; see resume.ts).
+  const resumed = useRef<ResumeState | null | undefined>(undefined);
+  if (resumed.current === undefined) resumed.current = takeResume();
+  const r = resumed.current;
+
+  const [currentView, setCurrentView] = useState<ViewState>(r?.view ?? 'landing');
+  const [shopName, setShopName] = useState(r?.shopName ?? '');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(r?.selectedCategory ?? null);
+  const [selectedDeviceType, setSelectedDeviceType] = useState<string | null>(r?.selectedDeviceType ?? null);
+  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(r?.selectedBrandId ?? null);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(r?.selectedModelId ?? null);
+  const [queue, setQueue] = useState<QueueItem[]>(r?.queue ?? []);
+  const [lastSubmission, setLastSubmission] = useState<Submission | null>(r?.lastSubmission ?? null);
   const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions);
   const [isAdmin, setIsAdmin] = useState(false);
   const [lang, setLangState] = useState<'en' | 'ar'>(() => {
@@ -144,6 +152,18 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   // Re-pull submissions on demand (admin "Refresh" button) so new vendor
   // requests show up without a page reload / re-login. On a failed fetch
   // the current list is kept rather than blanked.
+  // Where the vendor is right now, for a reload that picks up a new version.
+  const snapshotForResume = (): ResumeState => ({
+    view: currentView,
+    shopName,
+    selectedCategory,
+    selectedDeviceType,
+    selectedBrandId,
+    selectedModelId,
+    queue,
+    lastSubmission,
+  });
+
   // Requests the admin has just deleted: a refresh that was already in flight
   // must not bring them back for a moment.
   const deletedIds = useRef<Set<string>>(new Set());
@@ -379,6 +399,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         isAdmin, setIsAdmin,
         lang, setLang,
         refreshSubmissions,
+        snapshotForResume,
         resetWizard,
         modelTags,
         getModelTags,
