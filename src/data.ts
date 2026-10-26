@@ -335,7 +335,11 @@ export async function loadLiveCatalog(): Promise<boolean> {
   // position (by insertion order) and simply sorts after the named block.
   // Family names must match `model_family` in `master_data` exactly.
   const FAMILY_ORDER_OVERRIDES: Record<string, string[]> = {
-    samsung: ['Galaxy A07 4G', 'Galaxy A07s 4G', 'Galaxy A08 4G'],
+    // Through 'Galaxy A17 5G' just holds the existing natural position; only
+    // 'Galaxy A18 4G' needed to move, slotted directly after 'Galaxy A17 5G'
+    // per George. The remaining Samsung families (A26 5G onward) are left
+    // unlisted so they keep sorting after this block in their normal order.
+    samsung: ['Galaxy A07 4G', 'Galaxy A07s 4G', 'Galaxy A08 4G', 'Galaxy A17 4G', 'Galaxy A17 5G', 'Galaxy A18 4G'],
     xiaomi: ['Poco C85 4G', 'Redmi A5 4G', 'Redmi A7 4G', 'Redmi A7 Pro 4G', 'Redmi 17 4G', 'Redmi 17 5G'],
     honor: ['X5c 4G', 'X5c Plus 4G', 'X6c 4G', 'X6e 4G', 'Play 20A', 'X7e 4G', 'X7e Plus 5G'],
     // Everything through 'Note 70 4G' is listed here just to hold its
