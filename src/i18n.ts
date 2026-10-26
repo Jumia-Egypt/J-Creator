@@ -128,6 +128,11 @@ const ar: Record<string, string> = {
   'choice.teamDesc': 'سيقوم فريق المحتوى لدينا بإنشاء المنتجات نيابةً عنك. لا يلزم منك أي إجراء آخر.',
   'choice.cancel': 'العودة إلى دفعتي',
   'choice.downloadFailed': 'تم إرسال دفعتك، لكن تعذّر تنزيل الملف. يمكنك تنزيله مرة أخرى في الشاشة التالية.',
+
+  // New version notice
+  'update.ready': 'يتوفر إصدار جديد. سيتم التحديث تلقائيًا عند الانتهاء من هذه الدفعة.',
+  'update.now': 'حدّث الآن',
+  'update.confirm': 'سيؤدي التحديث الآن إلى مسح دفعتك الحالية. هل تريد المتابعة؟',
 };
 
 // Returns a translator: `t('landing.start', 'Start New Batch')`. The English

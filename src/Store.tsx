@@ -1,7 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { QueueItem, ViewState, Submission, SubmissionItem } from './types';
 import { modelFamilies, brands, fetchFlaggedFamilyIds } from './data';
 import { sb } from './supabase';
+
+// How often the Admin Portal re-checks for new vendor requests.
+const SUBMISSIONS_REFRESH_MS = 15000;
 
 // Reads every submission row out of the sandbox `submissions` table and
 // groups it back into this design's Submission/SubmissionItem shape by
@@ -141,10 +144,40 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   // Re-pull submissions on demand (admin "Refresh" button) so new vendor
   // requests show up without a page reload / re-login. On a failed fetch
   // the current list is kept rather than blanked.
+  // Requests the admin has just deleted: a refresh that was already in flight
+  // must not bring them back for a moment.
+  const deletedIds = useRef<Set<string>>(new Set());
+
   const refreshSubmissions = async () => {
     const rows = await fetchSandboxSubmissions();
-    if (rows) setSubmissions(rows);
+    if (rows) setSubmissions(rows.filter((s) => !deletedIds.current.has(s.id)));
   };
+
+  // While the admin is signed in, look for new vendor requests by itself: on a
+  // timer, when the tab comes back into view, and right after signing in. A
+  // failed check keeps the list as it is.
+  useEffect(() => {
+    if (!isAdmin) return;
+    let busy = false;
+    const poll = async () => {
+      if (busy || document.visibilityState !== 'visible') return;
+      busy = true;
+      try {
+        await refreshSubmissions();
+      } finally {
+        busy = false;
+      }
+    };
+    poll();
+    const timer = window.setInterval(poll, SUBMISSIONS_REFRESH_MS);
+    document.addEventListener('visibilitychange', poll);
+    window.addEventListener('focus', poll);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', poll);
+      window.removeEventListener('focus', poll);
+    };
+  }, [isAdmin]);
 
   // Helper to construct baseline model tags from modelFamilies definition
   const getDefaultModelTags = (): Record<string, string[]> => {
@@ -306,14 +339,19 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteSubmission = (id: string) => {
+    deletedIds.current.add(id);
     setSubmissions((prev) => prev.filter((s) => s.id !== id));
 
     (async () => {
       try {
         const { error } = await sb.from('submissions').delete().eq('batch_id', id);
-        if (error) console.error('Sandbox submission delete failed', error);
+        if (error) {
+          console.error('Sandbox submission delete failed', error);
+          deletedIds.current.delete(id); // not deleted: let the next refresh show it again
+        }
       } catch (e) {
         console.error('Sandbox submission delete exception', e);
+        deletedIds.current.delete(id);
       }
     })();
   };

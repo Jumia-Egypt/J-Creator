@@ -16,6 +16,7 @@ import { QueueScreen } from './screens/QueueScreen';
 import { ExportScreen } from './screens/ExportScreen';
 import { AdminScreen } from './screens/AdminScreen';
 import { loadLiveCatalog, modelFamilies, variants } from './data';
+import { AppUpdater } from './AppUpdater';
 
 // How often an open page re-checks the database for newly added products.
 const CATALOG_REFRESH_MS = 30000;
@@ -120,6 +121,7 @@ export default function App() {
 
   return (
     <StoreProvider>
+      <AppUpdater />
       <Router catalogVersion={catalogVersion} />
     </StoreProvider>
   );
