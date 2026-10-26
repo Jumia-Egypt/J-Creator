@@ -198,8 +198,11 @@ export const getVariantsByModelId = (modelId: string) => variants.filter(v => v.
 const BRAND_NAME_TO_ID: Record<string, string> = {};
 brands.forEach(b => { BRAND_NAME_TO_ID[b.name.toLowerCase()] = b.id; });
 
+// Internal ids only (never shown, never written to the bulk sheet). A "+" must
+// count as "plus": otherwise "Galaxy S25+ 5G" and "Galaxy S25 5G" get the same
+// id and the "+" model disappears into the plain one.
 const slugify = (s: string): string =>
-  s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  s.toLowerCase().trim().replace(/\+/g, ' plus ').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 // The UI no longer displays a color swatch circle (just the phone image and
 // color name), so this is a fixed placeholder — kept only because the
