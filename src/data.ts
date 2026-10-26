@@ -240,6 +240,20 @@ interface MasterDataRow {
   is_new_launch: boolean | null;
 }
 
+// A device is only offered to vendors if it is complete: a real barcode, a
+// working main-image link and its core data. Anything else (no barcode, "#N/A"
+// instead of a photo link, empty colour or memory) is ignored, so an incomplete
+// device can never be picked, queued or submitted -- even if one is added to the
+// database by mistake.
+const isCompleteRow = (row: MasterDataRow): boolean =>
+  /^[0-9]{12,14}$/.test((row.barcode || '').trim())
+  && /^https?:\/\/\S+$/.test((row.image1 || '').trim())
+  && !!(row.brand || '').trim()
+  && !!(row.model_family || '').trim()
+  && !!(row.color || '').trim()
+  && !!(row.ram || '').trim()
+  && !!(row.rom || '').trim();
+
 // Parses "8GB/256GB" into [8, 256] so storage options can be sorted
 // smallest-to-largest (ROM first, then RAM) instead of alphabetically —
 // a plain string sort would put "12GB/256GB" before "4GB/64GB". Mirrors
@@ -284,6 +298,7 @@ export async function loadLiveCatalog(): Promise<boolean> {
   const varMap = new Map<string, Variant & { storageSet: Set<string> }>();
 
   (data as MasterDataRow[]).forEach(row => {
+    if (!isCompleteRow(row)) return;
     const brandId = row.brand ? BRAND_NAME_TO_ID[row.brand.toLowerCase()] : undefined;
     const modelFamilyName = row.model_family || '';
     if (!brandId || !modelFamilyName) return;
