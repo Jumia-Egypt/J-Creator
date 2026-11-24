@@ -369,9 +369,11 @@ export async function loadLiveCatalog(): Promise<boolean> {
     realme: ['Note 60x 4G', 'Note 70 4G', 'C100i 4G', 'C100 4G', 'C100x 4G'],
     // Through 'A6 4G' just holds the existing natural position; only
     // 'A6 5G' needed to move, slotted directly after 'A6 4G' per George.
-    // The remaining Oppo families (A6t 5G onward) are left unlisted so they
-    // keep sorting after this block in their normal order.
-    oppo: ['A5i 4G', 'A5x 4G', 'A5 4G', 'A5 Pro 4G', 'A6x 4G', 'A6 4G', 'A6 5G'],
+    // 'A6t 5G', 'A6 Pro 4G' and 'A6 Pro 5G' just hold their existing natural
+    // position; 'A7 Pro 5G' is slotted directly after 'A6 Pro 5G' per George.
+    // The remaining Oppo families (Reno 15f 5G onward) are left unlisted so
+    // they keep sorting after this block in their normal order.
+    oppo: ['A5i 4G', 'A5x 4G', 'A5 4G', 'A5 Pro 4G', 'A6x 4G', 'A6 4G', 'A6 5G', 'A6t 5G', 'A6 Pro 4G', 'A6 Pro 5G', 'A7 Pro 5G'],
   };
   const originalIndexById = new Map<string, number>();
   liveModelFamilies.forEach((f, i) => originalIndexById.set(f.id, i));
